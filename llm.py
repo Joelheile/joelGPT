@@ -1,5 +1,5 @@
 import numpy as np
-# data
+# data (text to numbers, train/val split, batches)
 ## input
 file = open("tinystories-test.txt")
 text=file.read()
@@ -46,21 +46,23 @@ train_split = len(data) * 0.9
 train_data = data[:int(train_split)]
 val_data = data[int(train_split):]
 
-def get_batch(split):
-    batch_size = 4
-    block_size = 8
-    starts = np.random.randint(0, len(split) - block_size, batch_size)
+## batching
+batch_size = 4
+block_size = 8
+
+def get_batch(split): # split is either train or val data; train on random batch in text
+    starts = np.random.randint(0, len(split) - block_size, batch_size) # picks [block_size] random positions in text
 
     result_x = []
     result_y = []
     for i in starts:
-        x = split[i:i + block_size]
-        y = split[i+1:i+1 + block_size]
+        x = split[i:i + block_size]  # cuts section with block_size numbers starting at i
+        y = split[i+1:i+1 + block_size] # one more as we need next character for input into model
 
         result_x.append(x)
         result_y.append(y)
 
-    result_x = np.stack(result_x, axis=0)
+    result_x = np.stack(result_x, axis=0) # turns each list into table with batch_size rows and block_size columns (4,8)
     result_y = np.stack(result_y, axis=0)
 
     return result_x, result_y
@@ -70,24 +72,31 @@ print(x.shape, y.shape)
 print(x[0], y[0])
 
 
+# embeddings (token table + position table, look up rows)
+n_embd=16
+
+token_table=np.random.randn(vocab_size, n_embd) * 0.02 # else values get too big and training unstable
+position_table = np.random.randn(block_size, n_embd) * 0.02
+
+def embed(x):
+    positions = np.arange(block_size) # return spaced values in interval
+    return token_table[x] + position_table[positions] # merges token and position into one vector
+
+print(token_table.shape)
 
 
+# attention (causal mask, softmax over scores, multi-head)
 
-## embedding layer
+# transformer block (layer norm, attention, feed forward, residuals)
 
-# model forward pass
-## positional encoding
-## layer normalization
-## causal multi-headed attention
-## feed forward neural network
-## linearization
-## softmax
+# output (final layer norm, linear layer to vocab_size scores)
 
-# training
-## calculating cross-entropy loss
-## backward pass
-## gradient check
-## optimizer
-## training loop
+# loss (softmax + cross-entropy)
 
-# testing and optimizing
+# backward pass (gradient for every layer, gradient check)
+
+# optimizer (Adam, update weights)
+
+# training loop (batch, forward, loss, backward, update, val loss, save weights)
+
+# generate (prompt, predict next char, sample, append, repeat)
