@@ -148,10 +148,12 @@ output= multi_head_attention(embedded)
 
 # transformer block (layer normalization, attention, feed forward, residuals)
 
-gamma = np.ones(n_embedding)
-beta = np.zeros(n_embedding)
+gamma1 = np.ones(n_embedding) # before attention
+beta1 = np.zeros(n_embedding)
+gamma2 = np.ones(n_embedding) # before feed forward
+beta2 = np.zeros(n_embedding)
 
-def layer_normalization(x):
+def layer_normalization(x, gamma, beta):
     mean = np.mean(x, axis=-1, keepdims=True)
     variance = np.var(x, axis=-1, keepdims=True)
 
@@ -159,14 +161,32 @@ def layer_normalization(x):
     result = gamma * normalized + beta
     return result
 
-normalized_embedded = layer_normalization(embedded)
+normalized_embedded = layer_normalization(embedded, gamma1, beta1)
 
-## feed forward
+## feed forward neural network with two layers, need random start points to nudge in different directions
+W1 = np.random.randn(n_embedding, 4* n_embedding) * 0.02
+b1 = np.zeros(4* n_embedding)
+W2 = np.random.randn(4* n_embedding, n_embedding) * 0.02
+b2 = np.zeros(n_embedding)
 
+def feed_forward(x):
+    hidden = x @ W1 + b1
+    ReLU = np.maximum(0, hidden) # return function but 0 everything below 0
+    return ReLU @ W2 + b2
 
+print(feed_forward(normalized_embedded).shape)
 
+def transformer_block(x):
+    ## x gets added to result after multi head attention, values normalized before calculating
 
-# output (final layer norm, linear layer to vocab_size scores)
+    x = x + multi_head_attention(layer_normalization(x, gamma1, beta1))
+    x = x + feed_forward(layer_normalization(x, gamma2, beta2))
+
+    return x
+
+transformer_block(embedded)
+
+# output (final layer normalization, linear layer to vocab_size scores)
 
 
 
