@@ -1,0 +1,8 @@
+__pycache__/
+.claude/
+*.pkl
+*.pt
+*.tmp
+*.bin
+data/*
+!data/.gitkeep

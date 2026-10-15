@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import pickle
+import sys
 import time
 
 # settings
@@ -13,31 +14,19 @@ n_layers = 4 # transformer blocks stacked
 
 
 # data (text to numbers, train/val split, batches)
-## input
-with open("tinystories-test.txt") as file:
+with open("data/tinystories-test.txt") as file:
     text = file.read()
 
-## tokenizer
-sorted_characters = sorted(set(text))
-vocab_size = len(sorted_characters)
+## tokenizer (one number per char)
+characters = sorted(set(text))
+vocab_size = len(characters)
+char_to_number = {c: i for i, c in enumerate(characters)}
 
-char_to_number = {}
-number_to_char = {}
-for i, character in enumerate(sorted_characters):
-    char_to_number[character] = i
-    number_to_char[i] = character
+def encode(text):
+    return [char_to_number[c] for c in text]
 
-def encode(characters):
-    encoded_chars = []
-    for c in characters:
-        encoded_chars.append(char_to_number[c])
-    return encoded_chars
-
-def decode(encoded_chars):
-    decoded_text = []
-    for e in encoded_chars:
-        decoded_text.append(number_to_char[e])
-    return "".join(decoded_text)
+def decode(numbers):
+    return "".join(characters[n] for n in numbers)
 
 ## train/val split
 data = np.array(encode(text))
@@ -46,16 +35,11 @@ train_data = data[:train_split]
 val_data = data[train_split:]
 
 ## batching
-def get_batch(split): # split is train or val data
-    starts = np.random.randint(0, len(split) - block_size, batch_size) # random start positions
-
-    result_x = []
-    result_y = []
-    for i in starts:
-        result_x.append(split[i:i + block_size]) # input, block_size chars from i
-        result_y.append(split[i+1:i+1 + block_size]) # target, next char for each x
-
-    return np.stack(result_x), np.stack(result_y) # lists to tables (4, 8)
+def get_batch(data): # data is train_data or val_data
+    starts = np.random.randint(0, len(data) - block_size, batch_size) # random start positions
+    x = np.stack([data[i:i + block_size] for i in starts]) # input, block_size chars from i
+    y = np.stack([data[i + 1:i + 1 + block_size] for i in starts]) # target, next char for each x
+    return x, y
 
 
 # helpers
@@ -113,8 +97,8 @@ key_weights = np.random.randn(n_layers, n_heads, n_embedding, head_size) * 0.02
 value_weights = np.random.randn(n_layers, n_heads, n_embedding, head_size) * 0.02
 output_weights = np.random.randn(n_layers, n_embedding, n_embedding) * 0.02 # mixes heads
 
-def attention(x, layer, h): # h is head number
-    query = x @ query_weights[layer, h] # @ is matrix multiplication
+def attention(x, layer, h):
+    query = x @ query_weights[layer, h]
     key = x @ key_weights[layer, h]
     value = x @ value_weights[layer, h]
 
@@ -277,45 +261,14 @@ def backward_pass(x, y, cache):
             d_gamma_final, d_beta_final, d_vocab_weights]
 
 
-# gradient check (nudge one weight, compare loss change with computed gradient)
-def gradient_check(weights, computed_grad, x, y):
-    index = [] # random position, one number per dimension
-    for size in weights.shape:
-        index.append(np.random.randint(size))
-    index = tuple(index)
-
-    original = weights[index]
-    weights[index] = original + 1e-5
-    loss_plus = forward_pass(x, y)[0]
-    weights[index] = original - 1e-5
-    loss_minus = forward_pass(x, y)[0]
-    weights[index] = original # put it back
-
-    print("numerical", (loss_plus - loss_minus) / 2e-5, "computed", computed_grad[index])
-
-
-# run one batch with gradient check (off, only for testing backward pass)
-# x, y = get_batch(train_data) # x inputs, y correct next chars
-# loss, cache = forward_pass(x, y)
-# print("loss", loss)
-
-# gradients = backward_pass(x, y, cache)
-# for weights, gradient in zip(parameters, gradients): # pairs each weight with its gradient
-#     gradient_check(weights, gradient, x, y)
-
-
 # optimizer (Adam, update weights)
 learning_rate = 1e-3
 optimizer_beta1 = 0.9 # how much m remembers
 optimizer_beta2 = 0.999 # how much v remembers
 epsilon = 1e-8 # prevents division by zero
 
-m = [] # momentum, average gradient per weight
-v = [] # average squared gradient per weight
-
-for weights in parameters: # every table in parameters gets optimized
-    m.append(np.zeros_like(weights))
-    v.append(np.zeros_like(weights))
+m = [np.zeros_like(weights) for weights in parameters] # momentum, average gradient per weight
+v = [np.zeros_like(weights) for weights in parameters] # average squared gradient per weight
 step = 0
 
 def adam_optimizer(gradients):
@@ -331,17 +284,11 @@ def adam_optimizer(gradients):
 # training loop (batch, forward, loss, backward, update, val loss, save weights)
 max_steps = len(train_data) // (batch_size * block_size) # one pass over train data
 eval_interval = 1000
-
 eval_batches = 20 # val batches to average, one is too noisy
 
-def validation_loss():
-    losses = []
-    for i in range(eval_batches):
-        x, y = get_batch(val_data)
-        losses.append(forward_pass(x, y)[0]) # forward only, no learning from val
-    return np.mean(losses)
+def validation_loss(): # forward only, no learning from val
+    return np.mean([forward_pass(*get_batch(val_data))[0] for _ in range(eval_batches)])
 
-# train with ai built visualizer 
 def train():
     start = time.time()
     train_losses = [] # [step, loss] pairs, visualizer draws them
@@ -349,10 +296,9 @@ def train():
     for step_number in range(max_steps):
         x, y = get_batch(train_data)
         loss, cache = forward_pass(x, y)
-        gradients = backward_pass(x, y, cache)
-        adam_optimizer(gradients)
+        adam_optimizer(backward_pass(x, y, cache))
 
-        if step_number % eval_interval == 0: # every eval_interval steps
+        if step_number % eval_interval == 0:
             validation_losses.append([step_number, validation_loss()])
             print(f"validation loss {validation_losses[-1][1]:.3f}")
 
@@ -367,12 +313,12 @@ def train():
 def save(step_number, train_losses, validation_losses):
     checkpoint = {"parameters": parameters, "step": step_number, "max_steps": max_steps,
                   "train_losses": train_losses, "validation_losses": validation_losses}
-    with open("micro-gpt.tmp", "wb") as file: # wb is write bytes
+    with open("weights/micro_gpt.tmp", "wb") as file:
         pickle.dump(checkpoint, file)
-    os.replace("micro-gpt.tmp", "micro-gpt.pkl") # swap in one go, visualizer never reads half a file
+    os.replace("weights/micro_gpt.tmp", "weights/micro_gpt.pkl") # swap in one go, visualizer never reads half a file
 
 def load():
-    with open("micro-gpt.pkl", "rb") as file: # rb is read bytes
+    with open("weights/micro_gpt.pkl", "rb") as file:
         checkpoint = pickle.load(file)
     for weights, saved in zip(parameters, checkpoint["parameters"]):
         weights[...] = saved # [...] writes into the existing table, like -= in adam
@@ -382,8 +328,7 @@ def load():
 # generate (prompt, predict next char, sample, append, repeat)
 def generate(prompt, n_chars):
     numbers = encode(prompt)
-
-    for i in range(n_chars):
+    for _ in range(n_chars):
         context = numbers[-block_size:] # last block_size chars, position table has no more rows
         probabilities = predict(np.array([context]))[0] # batch of one
         next_number = np.random.choice(vocab_size, p=probabilities[-1]) # last row predicts next char
@@ -391,6 +336,10 @@ def generate(prompt, n_chars):
     return decode(numbers)
 
 
-# run (python llm.py trains, prompt.py imports this file and only generates)
+# run (python micro_gpt.py trains, python micro_gpt.py "Once upon a time" generates)
 if __name__ == "__main__":
-    train()
+    if len(sys.argv) > 1:
+        load()
+        print(generate(sys.argv[1], 500))
+    else:
+        train()

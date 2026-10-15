@@ -1,0 +1,1929 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>chatJPT training</title>
+    <style>
+      :root {
+        --page: #fafaf9;
+        --ink: #1c1c1a;
+        --ink-2: #5c5b57;
+        --muted: #8f8e89;
+        --line: #dedcd6;
+        --soft: #f0efeb;
+        --mono: ui-monospace, "SF Mono", Menlo, monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font:
+          14px/1.5 system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: var(--page);
+        border-bottom: 1px solid var(--line);
+        padding: 10px 24px;
+        display: flex;
+        gap: 32px;
+        align-items: baseline;
+        flex-wrap: wrap;
+      }
+      h1 {
+        font-size: 15px;
+        margin: 0;
+      }
+      h2 {
+        font-size: 14px;
+        margin: 0 0 8px;
+      }
+      h3 {
+        font-size: 12px;
+        font-weight: normal;
+        margin: 12px 0 4px;
+        color: var(--ink-2);
+        font-family: var(--mono);
+      }
+      .stat {
+        font-variant-numeric: tabular-nums;
+      }
+      .stat span {
+        color: var(--muted);
+        margin-right: 6px;
+      }
+      #status {
+        color: var(--muted);
+      }
+      #status.error {
+        color: #a33;
+      }
+      main {
+        padding: 16px 24px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      section {
+        border-top: 1px solid var(--line);
+        padding: 16px 0;
+      }
+      .flow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 6px;
+      }
+      .arrow {
+        align-self: center;
+        color: var(--muted);
+      }
+      .box {
+        border: 1px solid var(--line);
+        background: #fff;
+        border-radius: 4px;
+        padding: 5px 8px;
+        cursor: pointer;
+        font-family: var(--mono);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .box:hover {
+        border-color: var(--muted);
+      }
+      .box.on {
+        border-color: var(--ink);
+        background: var(--ink);
+        color: var(--page);
+      }
+      .box.back {
+        border-style: dashed;
+      }
+      .block {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 6px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        background: var(--soft);
+      }
+      .block-label {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--ink-2);
+        padding-right: 4px;
+      }
+      select {
+        font: 12px var(--mono);
+      }
+      .detail {
+        display: grid;
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+        gap: 24px;
+      }
+      pre {
+        font: 12px/1.45 var(--mono);
+        background: var(--soft);
+        border-radius: 4px;
+        padding: 10px;
+        overflow-x: auto;
+        margin: 0 0 8px;
+      }
+      .note {
+        color: var(--ink-2);
+        margin: 0 0 4px;
+      }
+      .maps {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      canvas {
+        display: block;
+        image-rendering: pixelated;
+        border: 1px solid var(--line);
+      }
+      .chars {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px;
+        font: 12px var(--mono);
+      }
+      .chars span {
+        width: 16px;
+        text-align: center;
+        background: var(--soft);
+      }
+      table {
+        border-collapse: collapse;
+        font: 12px var(--mono);
+      }
+      td,
+      th {
+        padding: 1px 10px 1px 0;
+        text-align: left;
+        border-bottom: 1px solid var(--soft);
+      }
+      th {
+        color: var(--muted);
+        font-weight: normal;
+      }
+      .hbar {
+        display: grid;
+        grid-template-columns: 120px 1fr 60px;
+        gap: 8px;
+        align-items: center;
+        font: 12px var(--mono);
+      }
+      .hbar div {
+        height: 6px;
+        background: var(--ink-2);
+      }
+      .bottom {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+      .legend {
+        font: 12px var(--mono);
+        color: var(--ink-2);
+        display: flex;
+        gap: 16px;
+      }
+      .generated {
+        font: 13px var(--mono);
+        white-space: pre-wrap;
+      }
+      #tip {
+        position: fixed;
+        pointer-events: none;
+        background: var(--ink);
+        color: var(--page);
+        font: 11px var(--mono);
+        padding: 2px 6px;
+        display: none;
+        z-index: 10;
+      }
+      .story {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px 32px;
+      }
+      .story > p {
+        grid-column: 1 / -1;
+        max-width: 80ch;
+        margin: 0;
+      }
+      .card h3 {
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--ink);
+        margin: 0 0 4px;
+      }
+      .guess {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px;
+        font: 13px var(--mono);
+      }
+      .guess span {
+        width: 17px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: 1px solid transparent;
+      }
+      .guess span.on {
+        border-color: var(--ink);
+        font-weight: 700;
+      }
+      .meter {
+        height: 10px;
+        background: var(--soft);
+        position: relative;
+        margin: 6px 0;
+      }
+      .meter div {
+        height: 100%;
+        background: #2a5a96;
+      }
+      .timeline div {
+        font: 12px var(--mono);
+        white-space: pre-wrap;
+        border-bottom: 1px solid var(--soft);
+        padding: 3px 0;
+      }
+      .timeline b {
+        color: var(--muted);
+        font-weight: normal;
+        margin-right: 8px;
+      }
+      .swatch {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        margin-right: 4px;
+      }
+      .explain {
+        display: grid;
+        grid-template-columns: max-content minmax(0, 80ch);
+        gap: 6px 12px;
+        margin: 0 0 12px;
+        padding: 10px 12px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+      }
+      .explain b {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+      }
+      .explain p {
+        margin: 0;
+      }
+      table.formula {
+        font: 12px system-ui, sans-serif;
+        width: 100%;
+        margin-bottom: 8px;
+      }
+      table.formula td {
+        vertical-align: top;
+        padding: 4px 12px 4px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      table.formula td.math {
+        font: 12px var(--mono);
+        white-space: nowrap;
+      }
+      table.formula code {
+        display: block;
+        font: 12px var(--mono);
+        background: var(--soft);
+        padding: 1px 4px;
+        white-space: pre-wrap;
+      }
+      table.formula .line {
+        font: 10px var(--mono);
+        color: var(--muted);
+      }
+      table.formula .missing {
+        color: #a33;
+        font-family: var(--mono);
+      }
+      .muted-cell {
+        color: var(--muted);
+      }
+      dl.terms {
+        display: grid;
+        grid-template-columns: max-content minmax(0, 72ch);
+        gap: 4px 12px;
+        margin: 0 0 8px;
+      }
+      dl.terms dt {
+        font-weight: 600;
+      }
+      dl.terms dd {
+        margin: 0;
+        color: var(--ink-2);
+      }
+      pre .hl {
+        background: #fff1b8;
+      }
+      pre .ln {
+        color: var(--muted);
+        margin-right: 10px;
+        user-select: none;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>chatJPT training</h1>
+      <div class="stat"><span>step</span><b id="step">-</b></div>
+      <div class="stat"><span>train loss</span><b id="train-loss">-</b></div>
+      <div class="stat"><span>validation loss</span><b id="val-loss">-</b></div>
+      <div id="status">connecting</div>
+    </header>
+    <main>
+      <section class="story arrays" id="story"></section>
+      <section class="arrays">
+        <h2>The details: model flow</h2>
+        <p class="note">
+          Click a step to see its arrays and code. All arrays come from one
+          fixed sample and update every 100 training steps.
+        </p>
+        <div class="flow" id="flow"></div>
+      </section>
+      <section class="detail arrays">
+        <div id="detail"></div>
+        <div id="code"></div>
+      </section>
+      <section class="bottom">
+        <div>
+          <h2>Loss</h2>
+          <div class="legend">
+            <span>━ train</span
+            ><span style="color: var(--muted)">━ validation</span
+            ><span>┄ random guess</span>
+          </div>
+          <svg id="chart" width="100%" height="200"></svg>
+        </div>
+        <div>
+          <h2>Sample text</h2>
+          <div class="generated" id="generated"></div>
+        </div>
+      </section>
+    </main>
+    <div id="tip"></div>
+    <script>
+      const state = {
+        setup: null,
+        progress: null,
+        view: null,
+        stage: "attention",
+        layer: 0,
+        head: 0,
+        shownStep: null,
+        pick: null,
+      };
+      const VOWELS = new Set("aeiouAEIOU");
+      const GROUPS = [
+        { name: "vowels", color: "#2a78d6", test: (c) => VOWELS.has(c) },
+        { name: "small consonants", color: "#eb6834", test: (c) => /[a-z]/.test(c) },
+        { name: "capitals", color: "#1baf7a", test: (c) => /[A-Z]/.test(c) },
+        { name: "space, digits, punctuation", color: "#8f8e89", test: () => true },
+      ];
+
+      const STAGES = [
+        { id: "batch", label: "get_batch", fn: ["get_batch"] },
+        { id: "embed", label: "embed", fn: ["embed"] },
+        {
+          block: [
+            {
+              id: "ln1",
+              label: "layer_norm",
+              fn: ["layer_norm", "transformer_block"],
+            },
+            { id: "attention", label: "attention", fn: ["attention"] },
+            {
+              id: "combine",
+              label: "multi_head_attention",
+              fn: ["multi_head_attention", "transformer_block"],
+            },
+            {
+              id: "ln2",
+              label: "layer_norm",
+              fn: ["layer_norm", "transformer_block"],
+            },
+            { id: "feed_forward", label: "feed_forward", fn: ["feed_forward"] },
+            { id: "residual", label: "+ residual", fn: ["transformer_block"] },
+          ],
+        },
+        { id: "final", label: "layer_norm", fn: ["predict"] },
+        { id: "lens", label: "guess per block", fn: ["predict"] },
+        { id: "predict", label: "softmax", fn: ["predict"] },
+        { id: "loss", label: "loss", fn: ["forward_pass"] },
+        {
+          id: "backward",
+          label: "backward_pass",
+          fn: ["backward_pass"],
+          back: true,
+        },
+        {
+          id: "adam",
+          label: "adam_optimizer",
+          fn: ["adam_optimizer"],
+          back: true,
+        },
+      ];
+
+      const el = (tag, attrs = {}, ...children) => {
+        const node = document.createElement(tag);
+        for (const [key, value] of Object.entries(attrs)) {
+          if (key === "onclick" || key === "onchange") node[key] = value;
+          else node.setAttribute(key, value);
+        }
+        node.append(...children);
+        return node;
+      };
+      const fmt = (value) =>
+        Math.abs(value) >= 100 ? value.toFixed(0) : value.toPrecision(3);
+
+      function colorFor(value, max, positive) {
+        const t = Math.min(1, Math.abs(value) / (max || 1));
+        const mix = (r, g, b) =>
+          `rgb(${255 - (255 - r) * t},${255 - (255 - g) * t},${255 - (255 - b) * t})`;
+        if (positive) return mix(40, 40, 38);
+        return value >= 0 ? mix(150, 70, 50) : mix(50, 80, 120);
+      }
+
+      function heatmap(
+        title,
+        matrix,
+        { positive = false, colLabels = null } = {},
+      ) {
+        const rows = matrix.length;
+        const cols = matrix[0].length;
+        const cell = Math.max(1, Math.min(8, Math.floor(520 / cols)));
+        const rowHeight = Math.max(4, Math.min(8, Math.floor(400 / rows)));
+        const canvas = el("canvas", {
+          width: cols * cell,
+          height: rows * rowHeight,
+        });
+        const context = canvas.getContext("2d");
+        const max = Math.max(...matrix.flat().map(Math.abs));
+        matrix.forEach((row, i) =>
+          row.forEach((value, j) => {
+            context.fillStyle = colorFor(value, max, positive);
+            context.fillRect(j * cell, i * rowHeight, cell, rowHeight);
+          }),
+        );
+        const tip = document.getElementById("tip");
+        canvas.onmousemove = (event) => {
+          const i = Math.floor(event.offsetY / rowHeight);
+          const j = Math.floor(event.offsetX / cell);
+          if (i >= rows || j >= cols) return;
+          const column = colLabels ? `'${colLabels[j]}'` : `col ${j}`;
+          tip.textContent = `pos ${i} '${state.view.x[i]}', ${column}: ${fmt(matrix[i][j])}`;
+          tip.style.display = "block";
+          tip.style.left = event.clientX + 12 + "px";
+          tip.style.top = event.clientY + 12 + "px";
+        };
+        canvas.onmouseleave = () => (tip.style.display = "none");
+        return el(
+          "div",
+          {},
+          el("h3", {}, `${title}  (${rows}, ${cols})`),
+          canvas,
+        );
+      }
+
+      function chars(title, list) {
+        return el(
+          "div",
+          {},
+          el("h3", {}, title),
+          el("div", { class: "chars" }, ...list.map((c) => el("span", {}, c))),
+        );
+      }
+
+      function bars(names, values) {
+        const max = Math.max(...values) || 1;
+        return el(
+          "div",
+          {},
+          ...names.map((name, i) =>
+            el(
+              "div",
+              { class: "hbar" },
+              name,
+              el("div", { style: `width: ${(100 * values[i]) / max}%` }),
+              fmt(values[i]),
+            ),
+          ),
+        );
+      }
+
+      const NS = "http://www.w3.org/2000/svg";
+      const svgEl = (tag, attrs = {}, text = "") => {
+        const node = document.createElementNS(NS, tag);
+        for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+        node.textContent = text;
+        return node;
+      };
+      const sure = (p) => {
+        const t = Math.sqrt(Math.min(1, p));
+        return `rgb(${240 - 198 * t},${239 - 149 * t},${235 - 85 * t})`;
+      };
+      const ink = (p) => (p > 0.35 ? "#fafaf9" : "#1c1c1a");
+      const percent = (p) => `${(p * 100).toFixed(p < 0.1 ? 1 : 0)}%`;
+      const headMean = (heads) =>
+        heads[0].map((row, i) =>
+          row.map((_, j) => heads.reduce((sum, head) => sum + head[i][j], 0) / heads.length),
+        );
+
+      function arcs(letters, weights, pick, color) {
+        const cell = 10;
+        const height = 130;
+        const base = height - 22;
+        const svg = svgEl("svg", { width: letters.length * cell, height });
+        const middle = (j) => j * cell + cell / 2;
+        const strongest = Math.max(...weights[pick].slice(0, pick + 1));
+        weights[pick].forEach((w, j) => {
+          if (j > pick || w < strongest * 0.15) return;
+          const lift = Math.min(10 + (pick - j) * 2, base - 4);
+          svg.append(
+            svgEl("path", {
+              d: `M${middle(pick)},${base} Q${(middle(pick) + middle(j)) / 2},${base - lift} ${middle(j)},${base}`,
+              fill: "none",
+              stroke: color,
+              "stroke-width": (0.5 + (w / strongest) * 5).toFixed(2),
+              "stroke-opacity": (0.25 + (0.75 * w) / strongest).toFixed(2),
+              "stroke-linecap": "round",
+            }),
+          );
+        });
+        letters.forEach((c, j) => {
+          const label = svgEl(
+            "text",
+            {
+              x: middle(j),
+              y: height - 6,
+              "text-anchor": "middle",
+              "font-size": 11,
+              "font-family": "ui-monospace, Menlo, monospace",
+              "font-weight": j === pick ? 700 : 400,
+              fill: j > pick ? "#dedcd6" : "#1c1c1a",
+              style: "cursor: pointer",
+            },
+            c,
+          );
+          label.onclick = () => pickPosition(j);
+          svg.append(label);
+        });
+        return el("div", { style: "overflow-x: auto" }, svg);
+      }
+
+      function letterMap(map) {
+        const size = 300;
+        const pad = 16;
+        const xs = map.points.map((p) => p[0]);
+        const ys = map.points.map((p) => p[1]);
+        const scale = (values) => {
+          const low = Math.min(...values);
+          const span = Math.max(...values) - low || 1;
+          return (value) => pad + ((value - low) / span) * (size - 2 * pad);
+        };
+        const sx = scale(xs);
+        const sy = scale(ys);
+        const svg = svgEl("svg", { width: size, height: size, style: "border: 1px solid #dedcd6; background: #fff" });
+        map.chars.forEach((c, i) => {
+          const group = GROUPS.find((g) => g.test(c));
+          svg.append(
+            svgEl(
+              "text",
+              {
+                x: sx(xs[i]),
+                y: size - sy(ys[i]),
+                "text-anchor": "middle",
+                "dominant-baseline": "middle",
+                "font-size": 13,
+                "font-family": "ui-monospace, Menlo, monospace",
+                fill: group.color,
+                "font-weight": 600,
+              },
+              c,
+            ),
+          );
+        });
+        return el(
+          "div",
+          {},
+          svg,
+          el(
+            "div",
+            { class: "legend", style: "flex-wrap: wrap; margin-top: 4px" },
+            ...GROUPS.map((g) =>
+              el("span", {}, el("i", { class: "swatch", style: `background: ${g.color}` }), g.name),
+            ),
+          ),
+        );
+      }
+
+      function guessStrip(v) {
+        return el(
+          "div",
+          { class: "guess" },
+          el("span", { style: "color: var(--muted)" }, v.x[0]),
+          ...v.y.map((c, i) =>
+            el(
+              "span",
+              {
+                class: i === state.pick ? "on" : "",
+                style: `background: ${sure(v.correct_probability[i])}; color: ${ink(v.correct_probability[i])}`,
+                onclick: () => pickPosition(i),
+              },
+              c,
+            ),
+          ),
+        );
+      }
+
+      function renderStory() {
+        const v = state.view;
+        const c = state.setup.config;
+        const i = state.pick;
+        const knobs = state.setup.parameter_shapes.reduce((sum, shape) => sum + shape.reduce((a, b) => a * b, 1), 0);
+        const choices = Math.exp(v.loss);
+        const card = (title, ...children) => el("div", { class: "card" }, el("h3", {}, title), ...children);
+        const note = (text) => el("p", { class: "note" }, text);
+        const guesses = v.top_chars[i].map((g, k) => `'${g}' ${percent(v.top_probabilities[i][k])}`).join(",  ");
+        const context = v.x.slice(Math.max(0, i - 24), i + 1).join("");
+        document.getElementById("story").replaceChildren(
+          el("h2", { style: "grid-column: 1 / -1; margin: 0" }, "What is happening, in simple words"),
+          el(
+            "p",
+            {},
+            `The model plays one game, over and over: read a bit of a story and guess the next letter. At the start it knows nothing, so it guesses at random. After every guess it checks the real next letter, and it turns its ${knobs.toLocaleString()} number knobs a tiny bit so the right letter gets a higher chance next time. That is training. This page shows the game on one fixed piece of text and updates every 100 training steps.`,
+          ),
+          card(
+            "1. The guessing game",
+            note("Each letter below is one guess. Dark blue: the model expected that letter. Pale: it was surprised. Click a letter."),
+            guessStrip(v),
+            note(`After reading "…${context}", the model guesses: ${guesses}. The real next letter is '${v.y[i]}' (it gave it ${percent(v.correct_probability[i])}).`),
+          ),
+          card(
+            "2. Score: how unsure is it?",
+            note(`There are ${c.vocab_size} different letters and signs. Right now the model is as unsure as if it picked between about ${choices < 10 ? choices.toFixed(1) : Math.round(choices)} of them. Lower is better. Random guessing is ${c.vocab_size}.`),
+            el("div", { class: "meter" }, el("div", { style: `width: ${Math.min(100, (100 * choices) / c.vocab_size)}%` })),
+            note(`Scientists call the log of this number the loss: ln(${choices.toFixed(1)}) = ${fmt(v.loss)}. The loss chart at the bottom shows it falling.`),
+          ),
+          card(
+            "3. What it writes, checkpoint by checkpoint",
+            note("Each line starts with \"" + state.setup.prompt + "\" and the model adds 200 letters, one guess at a time. Watch random letters turn into spaces, then short words."),
+            el(
+              "div",
+              { class: "timeline" },
+              ...v.timeline
+                .slice()
+                .reverse()
+                .map((entry) => el("div", {}, el("b", {}, `step ${entry.step}`), entry.text.slice(state.setup.prompt.length, state.setup.prompt.length + 90).replace(/\n/g, " ⏎ "))),
+            ),
+          ),
+          card(
+            "4. Where it looks",
+            note(`To guess the letter after '${v.x[i]}', the model looks back at earlier letters. A thicker line means it looks there more, compared with the other lines. Lines under 15% of the strongest one are hidden. It can never look ahead, that would be cheating. Block ${state.layer}, all ${c.n_heads} heads together.`),
+            arcs(v.x, headMean(v.head_attention), i, "#2a5a96"),
+          ),
+          card(
+            "5. The letter map",
+            note(`The model stores every letter as ${c.n_embedding} numbers. This map squeezes those numbers down to 2 so we can draw them. Letters the model uses in a similar way move close together. At the start they sit at random. As it learns, look for groups: capitals, punctuation, vowels.`),
+            letterMap(v.letter_map),
+          ),
+          card(
+            "6. What it learns first",
+            note("Real language models learn in the same order as this one. First: which letters are common (lots of 'e' and spaces). Then: which letter usually follows which ('q' then 'u'). Last: longer patterns, like whole words and names that appeared earlier in the story."),
+            note("Below this box are the real details: every step of the model, the numbers inside it and your code."),
+          ),
+        );
+      }
+
+      function pickPosition(i) {
+        state.pick = i;
+        renderStory();
+        renderDetail();
+      }
+
+      function renderFlow() {
+        const flow = document.getElementById("flow");
+        flow.replaceChildren();
+        const box = (stage) =>
+          el(
+            "div",
+            {
+              class: `box${stage.id === state.stage ? " on" : ""}${stage.back ? " back" : ""}`,
+              onclick: () => select(stage.id),
+            },
+            stage.label,
+          );
+        const picker = (count, current, name, onPick) =>
+          el(
+            "select",
+            { onchange: (event) => onPick(+event.target.value) },
+            ...Array.from({ length: count }, (_, i) =>
+              el(
+                "option",
+                i === current ? { value: i, selected: "" } : { value: i },
+                `${name} ${i}`,
+              ),
+            ),
+          );
+        const { n_layers, n_heads } = state.setup.config;
+        STAGES.forEach((stage, index) => {
+          if (index > 0) flow.append(el("span", { class: "arrow" }, "→"));
+          if (!stage.block) return flow.append(box(stage));
+          const inner = stage.block.flatMap((child, i) =>
+            i > 0
+              ? [el("span", { class: "arrow" }, "→"), box(child)]
+              : [box(child)],
+          );
+          flow.append(
+            el(
+              "div",
+              { class: "block" },
+              el(
+                "div",
+                { class: "block-label" },
+                `transformer_block × ${n_layers}`,
+                picker(n_layers, state.layer, "layer", (value) => {
+                  state.layer = value;
+                  loadView();
+                }),
+                picker(n_heads, state.head, "head", (value) => {
+                  state.head = value;
+                  loadView();
+                }),
+              ),
+              ...inner,
+            ),
+          );
+        });
+      }
+
+      function findStage(id) {
+        return STAGES.flatMap((stage) => stage.block || [stage]).find(
+          (stage) => stage.id === id,
+        );
+      }
+
+      function explainer(v, c) {
+        const p = state.pick;
+        const quote = (text) => `"${text}"`;
+        const context = v.x.slice(Math.max(0, p - 12), p + 1).join("");
+        const rows = c.batch_size * c.block_size;
+        const knobs = state.setup.parameter_shapes.reduce((sum, shape) => sum + shape.reduce((a, b) => a * b, 1), 0);
+        const lookedAt = v.head_attention[state.head][p]
+          .map((w, j) => ({ w, j }))
+          .slice(0, p + 1)
+          .sort((a, b) => b.w - a.w)
+          .slice(0, 3)
+          .map(({ w, j }) => `'${v.x[j]}' at position ${j} (${percent(w)})`)
+          .join(", ");
+        const active = v.hidden[p].filter((value) => value > 0).length;
+        const width = 4 * c.n_embedding;
+        const guesses = v.top_chars[p].map((g, k) => `'${g}' ${percent(v.top_probabilities[p][k])}`).join(", ");
+        const correct = v.correct_probability[p];
+        const lensPath = v.lens.map((row, k) => `${k === 0 ? "embedding" : `block ${k - 1}`}: '${row.top[p]}'`).join(", ");
+        return {
+          batch: [
+            `The model gets a piece of real text, ${c.block_size} letters long, and the same text shifted by one letter. For every letter in x, the letter below it in y is the answer it must guess. So one piece of text is ${c.block_size} guessing questions at once.`,
+            `get_batch picks ${c.batch_size} random start positions i and cuts x = data[i : i+${c.block_size}] and y = data[i+1 : i+${c.block_size + 1}], both shape (${c.batch_size}, ${c.block_size}) of char ids. Position t must predict y[t] using only x[0..t]. One training step trains on ${c.batch_size} × ${c.block_size} = ${rows} predictions. This page uses one fixed sequence from the validation data (batch of 1), so checkpoints stay comparable.`,
+          ],
+          embed: [
+            `A computer cannot calculate with letters, so each letter is swapped for its list of ${c.n_embedding} numbers from a table. A second table adds a list that says where in the text the letter sits. Training changes the numbers in both tables.`,
+            `token_table has shape (${c.vocab_size}, ${c.n_embedding}), one learned row per char. position_table has shape (${c.block_size}, ${c.n_embedding}), one learned row per position. embed returns token_table[x] + position_table[0..T-1], shape (1, ${c.block_size}, ${c.n_embedding}). Without the position rows, attention could not tell word order, because a dot product does not know where a vector came from. Only the token rows of chars that appear in a batch get a gradient in that step.`,
+          ],
+          ln1: [
+            "Before the block works with a letter's numbers, it rescales them so they are not too big or too small. That keeps the math in the same range, however much earlier blocks have added.",
+            `layer_norm works on each row (one position) alone: subtract the row mean, divide by sqrt(variance + 1e-5), then multiply by gamma1[${state.layer}] and add beta1[${state.layer}]. Both have shape (${c.n_embedding},), are learned, and start at 1 and 0. This is pre-norm: the normalized copy goes into attention, but the residual add later uses the original x.`,
+          ],
+          attention: [
+            `This is the only step where letters share information. Each letter sends out a question, and every earlier letter shows a label. Where question and label match, the letter copies information from there. Right now, in head ${state.head} of block ${state.layer}, '${v.x[p]}' at position ${p} looks most at ${lookedAt}. A letter can only look back, never ahead, because the letters ahead are the answers.`,
+            `Per position the head computes three vectors of ${c.head_size} numbers: query = x @ query_weights[${state.layer}, ${state.head}] (what it looks for), key = x @ key_weights (what it can be found by), value = x @ value_weights (what it passes on). scores = query @ keyᵀ / sqrt(${c.head_size}) has shape (${c.block_size}, ${c.block_size}). Entry (t, j) measures how well position t's query matches position j's key. Dividing by sqrt(head_size) keeps scores small, so softmax does not lock onto one position early in training. The causal mask sets scores with j > t to -inf, which become exactly 0 after softmax. softmax turns each row into weights ≥ 0 that sum to 1. The head output at t is the weighted average of the value vectors: weights @ value, shape (${c.block_size}, ${c.head_size}). The ${c.n_heads} heads have separate weights, so each can learn its own pattern, for example "the previous letter" or "the start of this word".`,
+          ],
+          combine: [
+            `Each of the ${c.n_heads} heads found something different. The model puts their results side by side, mixes them into one list of ${c.n_embedding} numbers, and adds that to the letter's list. It adds instead of replacing, so nothing the letter knew before is lost.`,
+            `multi_head_attention concatenates the ${c.n_heads} head outputs to shape (${c.block_size}, ${c.n_heads} × ${c.head_size} = ${c.n_embedding}) and multiplies by output_weights[${state.layer}] (${c.n_embedding} × ${c.n_embedding}), which lets heads combine. transformer_block then computes mid = x + attention_out. Because of this residual connection a block only writes a change on top of its input. In backprop the + passes the gradient on unchanged, so it reaches the early blocks without shrinking through every matrix.`,
+          ],
+          ln2: [
+            "The same rescaling as before, now on the result after attention, just before the feed forward step.",
+            `layer_norm(mid, gamma2[${state.layer}], beta2[${state.layer}]), the same formula as layer norm 1 with its own learned gamma and beta.`,
+          ],
+          feed_forward: [
+            `Now every letter works alone, without looking at others. Its ${c.n_embedding} numbers feed ${width} small detectors. Each detector either switches on for this letter in this context or stays at 0. The detectors that are on write a change back into the letter's list. At position ${p}, ${active} of ${width} are on. Attention collected information from other letters. This step processes it.`,
+            `hidden = x @ W1[${state.layer}] + b1[${state.layer}] widens each row from ${c.n_embedding} to ${width}. relu = max(0, hidden) sets negatives to 0, so each of the ${width} columns is a unit that is active or not. out = relu @ W2[${state.layer}] + b2[${state.layer}] maps back to ${c.n_embedding}. The same weights apply at every position. relu makes the block nonlinear: without it, W1 and W2 would collapse into one matrix. An inactive unit passes no gradient back, so it does not learn from that position in that step.`,
+          ],
+          residual: [
+            `The feed forward result is added to the letter's list too. The finished list goes into the next block, which repeats every step with its own weights. There are ${c.n_layers} blocks.`,
+            `layer_out = mid + feed_forward_out. The output of block l is the input of block l + 1. So each position's vector is a running sum: the embedding plus every change that attention and feed forward wrote in every block. This sum is called the residual stream.`,
+          ],
+          final: [
+            "After the last block comes one more rescaling, then the numbers are ready to turn into a guess.",
+            `layer_norm(block_out, gamma_final, beta_final), shape (${c.block_size}, ${c.n_embedding}). "guess per block" applies this same norm early to the output of each block.`,
+          ],
+          lens: [
+            `We can stop the model early and force it to guess. For the letter after ${quote(context)}, the guesses are ${lensPath}. The real answer is '${v.y[p]}'. This shows in which block the model figures out the answer.`,
+            "Logit lens: apply layer_norm(·, gamma_final, beta_final) @ vocab_weights and softmax to the residual stream after the embedding and after each block. It is a read-out only and plays no part in training. The intermediate streams were never trained to be read this way, so early rows are a rough view. The last row is the real prediction.",
+          ],
+          predict: [
+            `The model gives every one of the ${c.vocab_size} letters and signs a score, then turns the scores into chances that add up to 100%. After ${quote(context)} its top chances are ${guesses}.`,
+            `logits = final_norm @ vocab_weights, shape (${c.block_size}, ${c.vocab_size}), one raw score per char. softmax(logits) = exp(logit) / sum of exp over all ${c.vocab_size} chars, so each row is a probability distribution. Subtracting the row max before exp does not change the result and prevents overflow. generate samples the next char from the last row with np.random.choice, so the text varies between runs.`,
+          ],
+          loss: [
+            `The model is scored on how much chance it gave the real next letter. 100% means no penalty, a small chance means a big penalty. At position ${p} it gave '${v.y[p]}' ${percent(correct)}, so the penalty is -ln(${fmt(correct)}) = ${fmt(-Math.log(correct))}. The loss is the average penalty over all letters.`,
+            `loss = mean over all ${rows} positions of the batch of -log p(y). Random guessing gives ln(${c.vocab_size}) = ${fmt(Math.log(c.vocab_size))}. A loss of L means the model is as unsure as a uniform pick between e^L chars, here e^${fmt(v.loss)} = ${fmt(Math.exp(v.loss))}. -log punishes confident wrong answers hardest, so the model learns to spread its chances when it is unsure.`,
+          ],
+          backward: [
+            `Now the model works out, for every one of its ${knobs.toLocaleString()} numbers, which way to turn it to lower the penalty and how much it mattered. It starts at the answer and works backwards through every step.`,
+            `backward_pass applies the chain rule from the loss back to every parameter. At the output, d_logits = (probabilities - one_hot(y)) / ${rows}: the correct char gets a negative gradient (raise it) and every other char gets its probability (lower it). Through a matrix product out = a @ W: d_W = aᵀ @ d_out and d_a = d_out @ Wᵀ. Through relu, gradient passes only where the unit was active. At every residual +, the gradient is copied into both branches and the two results are added. The blocks run in reverse, last block first.`,
+          ],
+          adam: [
+            "Every number is turned a tiny step in its better direction. The optimizer remembers which way each number was pushed in recent steps, so steady pushes add up and random back and forth cancels out.",
+            `adam_optimizer keeps two running averages per weight: m = ${c.optimizer_beta1}·m + ${fmt(1 - c.optimizer_beta1)}·g (average gradient) and v = ${c.optimizer_beta2}·v + ${fmt(1 - c.optimizer_beta2)}·g² (average squared gradient). Both start at 0, so m_hat = m / (1 - ${c.optimizer_beta1}^step) and v_hat = v / (1 - ${c.optimizer_beta2}^step) remove that early bias. Update: w -= ${c.learning_rate} · m_hat / (sqrt(v_hat) + 1e-8). Dividing by sqrt(v_hat) makes each weight move about ${c.learning_rate} per step, whatever the size of its gradient.`,
+          ],
+        }[state.stage];
+      }
+
+const row = (math, fn, find, why = "") => ({ math, fn, find, why });
+const NORM_FORWARD = [
+  row(
+    "μ = mean of the row",
+    "normalize",
+    "mean = np.mean",
+    "one mean per position, over its numbers",
+  ),
+  row(
+    "σ = sqrt(variance + 1e-5)",
+    "normalize",
+    "std = np.sqrt",
+    "1e-5 avoids dividing by 0 for a flat row",
+  ),
+  row(
+    "x̂ = (x − μ) / σ",
+    "normalize",
+    "return (x - mean) / std",
+    "row now has mean 0 and spread 1",
+  ),
+  row(
+    "y = γ ⊙ x̂ + β",
+    "layer_norm",
+    "return gamma * normalized + beta",
+    "⊙ means multiply number by number. γ and β let training undo the scaling where it helps",
+  ),
+];
+const NORM_BACKWARD = {
+  text: "This is the trickiest backward step. Changing one number in a row also changes the mean and the spread of that row, and so it changes every output of the row. The formula for ∂L/∂x has two correction terms for exactly that.",
+  rows: [
+    row(
+      "∂L/∂γ = Σ over rows of ∂L/∂y ⊙ x̂",
+      "layer_norm_backward",
+      "d_gamma = np.sum",
+      "γ is shared by all positions, so its gradient sums over them",
+    ),
+    row(
+      "∂L/∂β = Σ over rows of ∂L/∂y",
+      "layer_norm_backward",
+      "d_beta = np.sum",
+    ),
+    row(
+      "g = ∂L/∂y ⊙ γ",
+      "layer_norm_backward",
+      "d_norm = d_out * gamma",
+      "back through the multiply by γ",
+    ),
+    row(
+      "∂L/∂x = (g − mean(g) − x̂ ⊙ mean(g ⊙ x̂)) / σ",
+      "layer_norm_backward",
+      "d_x = (d_norm",
+      "− mean(g) removes the part that only shifts the whole row, − x̂ ⊙ mean(g ⊙ x̂) removes the part that only stretches it. Layer norm undoes both, so they cannot change the loss",
+    ),
+  ],
+};
+const RESIDUAL_BACK = row(
+  "∂L/∂x = ∂L/∂mid + ∂L/∂(path through attention)",
+  "backward_pass",
+  "d_block_out = d_mid + d_norm1",
+  "x reached mid on two paths: straight through the + and through attention. Gradients from both paths add up",
+);
+
+const STEPS = {
+  batch: {
+    forward: [
+      row(
+        "starts = random positions in the data",
+        "get_batch",
+        "starts = np.random.randint",
+        "batch_size windows per step",
+      ),
+      row(
+        "x[b] = data[s : s + T]",
+        "get_batch",
+        "result_x.append",
+        "input window from start s",
+      ),
+      row(
+        "y[b] = data[s + 1 : s + 1 + T]",
+        "get_batch",
+        "result_y.append",
+        "same window one char later: the answers",
+      ),
+    ],
+    backward: {
+      text: "Nothing flows back into the batch. x and y are data, not learned numbers.",
+      rows: [],
+    },
+  },
+  embed: {
+    forward: [
+      row(
+        "e[t] = token_table[x[t]] + position_table[t]",
+        "embed",
+        "return token_table[x]",
+        "indexing with x picks one row per char",
+      ),
+    ],
+    backward: {
+      text: "The gradient that arrives here has come back through all blocks. A char that appears 5 times in the batch collects 5 gradients in its row.",
+      rows: [
+        row(
+          "∂L/∂token_table[c] = Σ over positions with x = c of ∂L/∂e",
+          "embed_backward",
+          "np.add.at",
+          "np.add.at adds once per occurrence. A plain += with repeated indices would count a repeated char only once",
+        ),
+        row(
+          "∂L/∂position_table[t] = Σ over the batch of ∂L/∂e[b, t]",
+          "embed_backward",
+          "d_position_table = np.sum",
+          "every sequence uses the same position rows",
+        ),
+        row(
+          "called once after the last block",
+          "backward_pass",
+          "embed_backward(d_block_out, x)",
+        ),
+      ],
+    },
+  },
+  ln1: {
+    forward: [
+      ...NORM_FORWARD,
+      row(
+        "attention reads layer_norm(x), the residual keeps x",
+        "transformer_block",
+        "multi_head_attention(layer_norm(x",
+      ),
+    ],
+    backward: {
+      ...NORM_BACKWARD,
+      rows: [
+        ...NORM_BACKWARD.rows,
+        row(
+          "called for layer norm 1",
+          "backward_pass",
+          "d_norm1, d_gamma1[layer]",
+        ),
+      ],
+    },
+  },
+  attention: {
+    terms: [
+      [
+        "Query",
+        (c) =>
+          `${c.head_size} numbers that each position computes from its own vector: what kind of earlier letter would help me now. Nobody tells the model what to look for. Training shapes query_weights until useful questions appear.`,
+      ],
+      [
+        "Key",
+        (c) =>
+          `${c.head_size} numbers that each position computes: what kind of letter I am, for others who search. A query and a key match when their dot product (multiply number by number, then add) is large, so their numbers point the same way.`,
+      ],
+      [
+        "Value",
+        (c) =>
+          `${c.head_size} numbers that each position computes: what I hand over when someone attends to me. It is separate from the key, so what makes a letter easy to find can differ from what it passes on.`,
+      ],
+      [
+        "Score",
+        () =>
+          "query · key / sqrt(head_size) for one pair of positions. Bigger means a better match.",
+      ],
+      [
+        "Mask",
+        () =>
+          "Sets the score to −∞ for every later position. After softmax that is a weight of exactly 0, so no position can read the answer ahead of it.",
+      ],
+      [
+        "Weights",
+        () =>
+          "softmax of one row of scores: numbers ≥ 0 that add up to 1. They say how much of each earlier value to take.",
+      ],
+      [
+        "Head",
+        (c) =>
+          `One full set of query, key and value weights. ${c.n_heads} heads per block work side by side, each with its own pattern.`,
+      ],
+    ],
+    forward: [
+      row(
+        "Q = X · W_Q",
+        "attention",
+        "query = x @",
+        "one query per position, (T, head_size)",
+      ),
+      row("K = X · W_K", "attention", "key = x @"),
+      row("V = X · W_V", "attention", "value = x @"),
+      row(
+        "S = Q · Kᵀ / √d",
+        "attention",
+        "scores = query @ key.mT",
+        "all query·key pairs at once, (T, T). .mT transposes the last two axes",
+      ),
+      row(
+        "M = lower triangle of ones",
+        "attention",
+        "mask = np.tril",
+        "M[t, j] = 1 when j ≤ t",
+      ),
+      row("S[t, j] = −∞ where j > t", "attention", "np.where(mask == 0", ""),
+      row(
+        "A = softmax(S), row by row",
+        "attention",
+        "weights = softmax(scores)",
+      ),
+      row(
+        "softmax(s)ⱼ = e^(sⱼ − max s) / Σₖ e^(sₖ − max s)",
+        "softmax",
+        "exp_x = np.exp",
+        "subtracting max s leaves the result unchanged and keeps exp from overflowing",
+      ),
+      row(
+        "",
+        "softmax",
+        "return exp_x / row_sums",
+        "divide by the row sum so each row adds to 1",
+      ),
+      row(
+        "out = A · V",
+        "attention",
+        "return weights @ value",
+        "weighted average of values, (T, head_size)",
+      ),
+    ],
+    backward: {
+      text: "The gradient for this head's output comes back from output_weights. From there it splits three ways: into the values, into the weights and through softmax into the scores, and from the scores into the queries and keys. Each of those then reaches the weight tables and the input x.",
+      rows: [
+        row(
+          "∂L/∂V = Aᵀ · ∂L/∂out",
+          "multi_head_attention_backward",
+          "d_value = weights.mT @ d_head",
+          "a value that got more attention gets more of the blame",
+        ),
+        row(
+          "∂L/∂A = ∂L/∂out · Vᵀ",
+          "multi_head_attention_backward",
+          "d_weights = d_head @ value.mT",
+        ),
+        row(
+          "∂L/∂S = A ⊙ (∂L/∂A − Σⱼ A ⊙ ∂L/∂A)",
+          "multi_head_attention_backward",
+          "d_scores = weights * (d_weights",
+          "softmax backward: raising one score lowers every other weight in its row, the subtracted sum accounts for that. Masked entries have A = 0, so they get 0",
+        ),
+        row(
+          "÷ √d",
+          "multi_head_attention_backward",
+          "d_scores = d_scores / np.sqrt",
+          "the forward pass divided, so the backward pass divides too",
+        ),
+        row(
+          "∂L/∂Q = ∂L/∂S · K",
+          "multi_head_attention_backward",
+          "d_query = d_scores @ key",
+        ),
+        row(
+          "∂L/∂K = ∂L/∂Sᵀ · Q",
+          "multi_head_attention_backward",
+          "d_key = d_scores.mT @ query",
+        ),
+        row(
+          "∂L/∂W_Q = Xᵀ · ∂L/∂Q, same for K and V",
+          "multi_head_attention_backward",
+          "d_query_weights[h] = flat(x).T",
+          "rows of X times the blame of the query they produced",
+        ),
+        row(
+          "∂L/∂X += ∂L/∂Q · W_Qᵀ + ∂L/∂K · W_Kᵀ + ∂L/∂V · W_Vᵀ",
+          "multi_head_attention_backward",
+          "d_x += d_query",
+          "X fed three paths in every head, so its gradient adds all of them",
+        ),
+      ],
+    },
+  },
+  combine: {
+    forward: [
+      row(
+        "H = concat(head₀, …, head₃)",
+        "multi_head_attention",
+        "np.concatenate(head_outputs",
+        "side by side, (T, n_embedding)",
+      ),
+      row(
+        "attention_out = H · W_O",
+        "multi_head_attention",
+        "return heads @ output_weights[layer]",
+        "mixes the heads",
+      ),
+      row(
+        "mid = x + attention_out",
+        "transformer_block",
+        "mid = x + attention_out",
+        "residual: add, do not replace",
+      ),
+    ],
+    backward: {
+      text: "Backward runs this in reverse: first the gradient for output_weights, then it splits back into one slice per head. At the + the gradient of mid goes unchanged to x, and also into attention.",
+      rows: [
+        row(
+          "∂L/∂W_O = Hᵀ · ∂L/∂attention_out",
+          "multi_head_attention_backward",
+          "d_output_weights = flat(heads).T",
+        ),
+        row(
+          "∂L/∂H = ∂L/∂attention_out · W_Oᵀ, cut into heads",
+          "multi_head_attention_backward",
+          "d_heads = (d_out @",
+        ),
+        row(
+          "slice of head h",
+          "multi_head_attention_backward",
+          "d_head = d_heads[:, :, h * head_size",
+        ),
+        RESIDUAL_BACK,
+      ],
+    },
+  },
+  ln2: {
+    forward: [
+      ...NORM_FORWARD,
+      row(
+        "feed forward reads layer_norm(mid)",
+        "transformer_block",
+        "feed_forward(layer_norm(mid",
+      ),
+    ],
+    backward: {
+      ...NORM_BACKWARD,
+      rows: [
+        ...NORM_BACKWARD.rows,
+        row(
+          "called for layer norm 2",
+          "backward_pass",
+          "d_norm2, d_gamma2[layer]",
+        ),
+      ],
+    },
+  },
+  feed_forward: {
+    forward: [
+      row(
+        "h = x · W1 + b1",
+        "feed_forward",
+        "hidden = x @ W1",
+        "widen to 4 × n_embedding",
+      ),
+      row(
+        "r = max(0, h)",
+        "feed_forward",
+        "relu = np.maximum",
+        "negatives become 0",
+      ),
+      row(
+        "out = r · W2 + b2",
+        "feed_forward",
+        "return relu @ W2",
+        "back to n_embedding",
+      ),
+    ],
+    backward: {
+      text: "Back through out = r · W2 + b2, then through relu, then through h = x · W1 + b1. relu has slope 1 where h > 0 and slope 0 elsewhere, so units that were off block the gradient.",
+      rows: [
+        row(
+          "∂L/∂W2 = rᵀ · ∂L/∂out",
+          "feed_forward_backward",
+          "d_W2 = flat(relu).T",
+        ),
+        row(
+          "∂L/∂b2 = Σ over rows of ∂L/∂out",
+          "feed_forward_backward",
+          "d_b2 = np.sum",
+          "b2 was added to every row",
+        ),
+        row(
+          "∂L/∂h = (∂L/∂out · W2ᵀ) ⊙ [h > 0]",
+          "feed_forward_backward",
+          "d_hidden = (d_out @ W2",
+          "[h > 0] is 1 or 0: the relu slope",
+        ),
+        row("∂L/∂W1 = xᵀ · ∂L/∂h", "feed_forward_backward", "d_W1 = flat(x).T"),
+        row(
+          "∂L/∂b1 = Σ over rows of ∂L/∂h",
+          "feed_forward_backward",
+          "d_b1 = np.sum",
+        ),
+        row(
+          "∂L/∂x = ∂L/∂h · W1ᵀ",
+          "feed_forward_backward",
+          "return d_hidden @ W1",
+        ),
+      ],
+    },
+  },
+  residual: {
+    forward: [
+      row(
+        "block_out = mid + feed_forward_out",
+        "transformer_block",
+        "return mid + feed_forward_out",
+      ),
+      row(
+        "next block reads block_out",
+        "predict",
+        "block_out, block_cache = transformer_block",
+      ),
+    ],
+    backward: {
+      text: "The blocks run backward last first. Inside each block both residual adds copy the gradient into two paths and add the results.",
+      rows: [
+        row(
+          "for l = L−1 down to 0",
+          "backward_pass",
+          "for layer in reversed(range(n_layers))",
+        ),
+        row(
+          "∂L/∂mid = ∂L/∂block_out + ∂L/∂(path through feed forward)",
+          "backward_pass",
+          "d_mid = d_block_out + d_norm2",
+        ),
+        RESIDUAL_BACK,
+      ],
+    },
+  },
+  final: {
+    forward: [
+      ...NORM_FORWARD,
+      row(
+        "final norm after the last block",
+        "predict",
+        "final_norm = layer_norm(block_out",
+      ),
+    ],
+    backward: {
+      ...NORM_BACKWARD,
+      rows: [
+        ...NORM_BACKWARD.rows,
+        row(
+          "called first, right after the logits",
+          "backward_pass",
+          "layer_norm_backward(d_logits @ vocab_weights.T",
+        ),
+      ],
+    },
+  },
+  lens: {
+    forward: [
+      row(
+        "guessₗ = softmax(layer_norm(streamₗ, γ_final, β_final) · W_vocab)",
+        null,
+        "",
+        "computed by visualize.py for this page, not part of the model file or training",
+      ),
+    ],
+    backward: { text: "Nothing. The read-out is for looking only.", rows: [] },
+  },
+  predict: {
+    forward: [
+      row(
+        "z = final_norm · W_vocab,  p = softmax(z)",
+        "predict",
+        "probabilities = flat(softmax(",
+        "one score per char, then chances",
+      ),
+      row(
+        "softmax(z)ⱼ = e^(zⱼ − max z) / Σₖ e^(zₖ − max z)",
+        "softmax",
+        "exp_x = np.exp",
+      ),
+    ],
+    backward: {
+      text: "softmax followed by −log has a short combined derivative: the chances minus 1 at the correct char. So the correct char's score is pushed up and every other score is pushed down in proportion to its chance.",
+      rows: [
+        row(
+          "onehot(y) = 1 at the correct char, 0 elsewhere",
+          "backward_pass",
+          "one_hot = np.eye",
+        ),
+        row(
+          "∂L/∂z = (p − onehot(y)) / N",
+          "backward_pass",
+          "d_logits = (probabilities - one_hot)",
+          "N = number of positions, because the loss is a mean",
+        ),
+        row(
+          "∂L/∂W_vocab = final_normᵀ · ∂L/∂z",
+          "backward_pass",
+          "d_vocab_weights = flat(final_norm).T",
+        ),
+      ],
+    },
+  },
+  loss: {
+    forward: [
+      row(
+        "pᵢ = p[i, yᵢ], chance of the correct char",
+        "forward_pass",
+        "correct_probabilities = probabilities[",
+      ),
+      row("L = −(1/N) Σᵢ log pᵢ", "forward_pass", "loss = -np.mean"),
+    ],
+    backward: {
+      text: "The backward pass starts here with ∂L/∂L = 1 and the combined softmax and log derivative.",
+      rows: [
+        row(
+          "∂L/∂z = (p − onehot(y)) / N",
+          "backward_pass",
+          "d_logits = (probabilities - one_hot)",
+        ),
+      ],
+    },
+  },
+  backward: {
+    terms: [
+      [
+        "Gradient",
+        () =>
+          "For one number in the model: how much the loss changes if that number grows by a tiny amount. Positive means growing it makes the loss worse, so the update makes it smaller.",
+      ],
+      [
+        "Chain rule",
+        () =>
+          "The loss depends on the logits, the logits on final_norm, final_norm on the last block, and so on down to the embeddings. The gradient of an early number is the product of the local slopes along that path. backward_pass computes one step at a time, from the loss down, and hands each result to the step below.",
+      ],
+      [
+        "∂L/∂x",
+        () =>
+          'Read as "gradient of the loss with respect to x". In the code every such array is named d_x and has the same shape as x.',
+      ],
+      [
+        "Cache",
+        () =>
+          "Backward needs values from the forward pass: inputs, relu on/off, attention weights. forward_pass returns them as cache, so backward_pass does not compute them again.",
+      ],
+      [
+        "Gradient check",
+        () =>
+          "A gradient check tests one random weight: nudge it by ±1e-5, measure the change in loss, divide by 2e-5, and compare with the computed gradient. If they match, backward is correct for that weight.",
+      ],
+    ],
+    forward: [],
+    backward: {
+      text: "Order in your code: output layer, final norm, then for each block from last to first: feed forward, layer norm 2, residual, attention, layer norm 1, residual. Embeddings last. Click a step in the model flow to see its backward formulas.",
+      rows: [
+        row(
+          "∂L/∂z = (p − onehot(y)) / N",
+          "backward_pass",
+          "d_logits = (probabilities - one_hot)",
+        ),
+        row(
+          "final norm",
+          "backward_pass",
+          "layer_norm_backward(d_logits @ vocab_weights.T",
+        ),
+        row(
+          "for l = L−1 down to 0",
+          "backward_pass",
+          "for layer in reversed(range(n_layers))",
+        ),
+        row(
+          "feed forward",
+          "backward_pass",
+          "feed_forward_backward(d_block_out",
+        ),
+        row("residual 2", "backward_pass", "d_mid = d_block_out + d_norm2"),
+        row(
+          "attention",
+          "backward_pass",
+          "multi_head_attention_backward(d_mid",
+        ),
+        RESIDUAL_BACK,
+        row("embeddings", "backward_pass", "embed_backward(d_block_out, x)"),
+      ],
+    },
+  },
+  adam: {
+    forward: [
+      row("t = t + 1", "adam_optimizer", "step += 1"),
+      row(
+        "m = β1 · m + (1 − β1) · g",
+        "adam_optimizer",
+        "m[i] = optimizer_beta1",
+        "running mean of the gradient",
+      ),
+      row(
+        "v = β2 · v + (1 − β2) · g²",
+        "adam_optimizer",
+        "v[i] = optimizer_beta2",
+        "running mean of the squared gradient",
+      ),
+      row(
+        "m̂ = m / (1 − β1ᵗ)",
+        "adam_optimizer",
+        "m_hat =",
+        "m starts at 0, this removes the early pull to 0",
+      ),
+      row("v̂ = v / (1 − β2ᵗ)", "adam_optimizer", "v_hat ="),
+      row(
+        "w = w − lr · m̂ / (√v̂ + ε)",
+        "adam_optimizer",
+        "weights -= learning_rate",
+        "-= changes the array in place, so parameters sees the new values",
+      ),
+    ],
+    backward: {
+      text: "Adam runs after backward. It uses the gradients, it does not produce any.",
+      rows: [],
+    },
+  },
+};
+
+function findLine(fn, find) {
+  const lines = state.setup.source[fn].split("\n");
+  const index = lines.findIndex((line) => line.includes(find));
+  if (index < 0) return null;
+  return {
+    number: state.setup.source_lines[fn] + index,
+    text: lines[index].trim(),
+  };
+}
+
+function formulaTable(rows) {
+  return el(
+    "table",
+    { class: "formula" },
+    el(
+      "tr",
+      {},
+      ...["math", "your code", "what it means"].map((h) => el("th", {}, h)),
+    ),
+    ...rows.map((r) => {
+      const line = r.fn ? findLine(r.fn, r.find) : null;
+      const code = !r.fn
+        ? el("td", { class: "muted-cell" }, `not in ${state.setup.file}`)
+        : line
+          ? el(
+              "td",
+              {},
+              el("span", { class: "line" }, `${r.fn} · ${state.setup.file}:${line.number}`),
+              el("code", {}, line.text),
+            )
+          : el("td", { class: "missing" }, `"${r.find}" not found in ${r.fn}`);
+      return el(
+        "tr",
+        {},
+        el("td", { class: "math" }, r.math),
+        code,
+        el("td", {}, r.why),
+      );
+    }),
+  );
+}
+
+function attentionExample(v, c) {
+  const p = state.pick;
+  const head = state.head;
+  const q = v.query[p];
+  const dot = (a, b) => a.reduce((sum, value, k) => sum + value * b[k], 0);
+  const scores = v.key
+    .slice(0, p + 1)
+    .map((k) => dot(q, k) / Math.sqrt(c.head_size));
+  const peak = Math.max(...scores);
+  const total = scores.reduce((sum, s) => sum + Math.exp(s - peak), 0);
+  const j = v.head_attention[head][p]
+    .slice(0, p + 1)
+    .reduce((best, w, k, row) => (w > row[best] ? k : best), 0);
+  const raw = dot(q, v.key[j]);
+  const products = q
+    .slice(0, 3)
+    .map((value, k) => `${fmt(value)}·${fmt(v.key[j][k])}`)
+    .join(" + ");
+  return el(
+    "pre",
+    {},
+    `Worked example: head ${head}, query at position ${p} '${v.x[p]}', key at position ${j} '${v.x[j]}' (its strongest match)\n` +
+      `q · k   = ${products} + … (${c.head_size} products) = ${fmt(raw)}\n` +
+      `score   = ${fmt(raw)} / sqrt(${c.head_size}) = ${fmt(raw / Math.sqrt(c.head_size))}\n` +
+      `weight  = e^(score − max) / Σ e^(scores − max) over ${p + 1} visible positions = ${fmt(Math.exp(scores[j] - peak) / total)}\n` +
+      `model   = ${fmt(v.head_attention[head][p][j])}  (weights[${p}, ${j}] from your forward pass)`,
+  );
+}
+
+function stepSections(v, c) {
+  const steps = STEPS[state.stage];
+  const parts = [];
+  if (steps.terms) {
+    parts.push(
+      el("h3", {}, "Words"),
+      el(
+        "dl",
+        { class: "terms" },
+        ...steps.terms.flatMap(([word, text]) => [
+          el("dt", {}, word),
+          el("dd", {}, text(c)),
+        ]),
+      ),
+    );
+  }
+  if (state.stage === "attention") parts.push(attentionExample(v, c));
+  if (steps.forward.length)
+    parts.push(
+      el("h3", {}, "Forward: formula → your code"),
+      formulaTable(steps.forward),
+    );
+  parts.push(
+    el("h3", {}, "Backward: what flows back through this step"),
+    el("p", { class: "note" }, steps.backward.text),
+  );
+  if (steps.backward.rows.length) parts.push(formulaTable(steps.backward.rows));
+  return parts;
+}
+
+function codePanel(stage) {
+  const steps = STEPS[stage.id];
+  const rows = [...steps.forward, ...steps.backward.rows].filter((r) => r.fn);
+  const names = [...new Set([...stage.fn, ...rows.map((r) => r.fn)])];
+  const marked = new Set(
+    rows
+      .map((r) => findLine(r.fn, r.find))
+      .filter(Boolean)
+      .map((line) => line.number),
+  );
+  return names.map((name) => {
+    const start = state.setup.source_lines[name];
+    return el(
+      "pre",
+      {},
+      ...state.setup.source[name]
+        .split("\n")
+        .map((text, k) =>
+          el(
+            "div",
+            { class: marked.has(start + k) ? "hl" : "" },
+            el("span", { class: "ln" }, String(start + k).padStart(3)),
+            text,
+          ),
+        ),
+    );
+  });
+}
+
+      function renderDetail() {
+        const v = state.view;
+        const c = state.setup.config;
+        const where = `Layer ${state.layer}.`;
+        const note = (text) => el("p", { class: "note" }, text);
+        const maps = (...items) => el("div", { class: "maps" }, ...items);
+        const body = {
+          batch: () => [
+            note(
+              `x is ${c.block_size} chars from validation data. y is x shifted by one.`,
+            ),
+            chars("x", v.x),
+            chars("y", v.y),
+          ],
+          embed: () => [
+            note(
+              "One token_table row per char plus one position_table row per position.",
+            ),
+            maps(
+              heatmap("token_table[x]", v.token_rows),
+              heatmap("position_table[positions]", v.position_rows),
+              heatmap("token + position", v.embedded),
+            ),
+          ],
+          ln1: () => [
+            note(
+              `${where} Each row scaled to mean 0 and spread 1, then times gamma1 plus beta1.`,
+            ),
+            maps(heatmap("layer_norm(x, gamma1, beta1)", v.ln1)),
+          ],
+          attention: () => [
+            note(
+              `${where} Head ${state.head}. Row i shows how much position i looks at each earlier position. Future positions are masked to 0.`,
+            ),
+            arcs(v.x, v.head_attention[state.head], state.pick, "#1c1c1a"),
+            note(
+              "Arcs show row " + state.pick + " of weights. Click a letter to change the row. Attention shows where a head reads from, not why the model made its guess.",
+            ),
+            maps(
+              heatmap("weights", v.head_attention[state.head], {
+                positive: true,
+                colLabels: v.x,
+              }),
+              heatmap("query", v.query),
+              heatmap("key", v.key),
+              heatmap("value", v.value),
+              heatmap("weights @ value", v.head_out),
+            ),
+          ],
+          combine: () => [
+            note(
+              `${where} Heads glued side by side, mixed by output_weights, added to x.`,
+            ),
+            maps(
+              heatmap("heads", v.heads),
+              heatmap("heads @ output_weights", v.attention_out),
+              heatmap("mid = x + attention_out", v.mid),
+            ),
+          ],
+          ln2: () => [
+            note(
+              `${where} Same as the first layer norm, with gamma2 and beta2.`,
+            ),
+            maps(heatmap("layer_norm(mid, gamma2, beta2)", v.ln2)),
+          ],
+          feed_forward: () => [
+            note(
+              `${where} Widen to ${4 * c.n_embedding}, relu, shrink back to ${c.n_embedding}.`,
+            ),
+            maps(
+              heatmap("relu(x @ W1 + b1)", v.hidden, { positive: true }),
+              heatmap("relu @ W2 + b2", v.feed_forward_out),
+            ),
+          ],
+          residual: () => [
+            note(
+              `${where} mid plus the feed forward output. Input of the next layer.`,
+            ),
+            maps(heatmap("mid + feed_forward_out", v.layer_out)),
+          ],
+          final: () => [
+            note(`Last layer norm, after all ${c.n_layers} blocks.`),
+            maps(
+              heatmap(
+                "layer_norm(block_out, gamma_final, beta_final)",
+                v.final_norm,
+              ),
+            ),
+          ],
+          lens: () => [
+            note(
+              `Logit lens: after the embedding and after every block, apply the final layer_norm and vocab_weights early and read the guess. Each row shows p(y) per position. The last row is the real prediction. Rows usually get darker with depth.`,
+            ),
+            maps(
+              heatmap(
+                "p(y) if the model stopped here",
+                v.lens.map((row) => row.correct),
+                { positive: true, colLabels: v.y },
+              ),
+            ),
+            el(
+              "table",
+              {},
+              el("tr", {}, ...["stops after", `top guess at position ${state.pick}`, `p('${v.y[state.pick]}')`].map((h) => el("th", {}, h))),
+              ...v.lens.map((row, k) =>
+                el(
+                  "tr",
+                  {},
+                  el("td", {}, k === 0 ? "embed" : `block ${k - 1}`),
+                  el("td", {}, row.top[state.pick]),
+                  el("td", {}, fmt(row.correct[state.pick])),
+                ),
+              ),
+            ),
+          ],
+          predict: () => [
+            note("Top 3 guesses for the next char at each position."),
+            el(
+              "table",
+              {},
+              el(
+                "tr",
+                {},
+                ...["pos", "x", "y", "p(y)", "top 3"].map((h) =>
+                  el("th", {}, h),
+                ),
+              ),
+              ...v.x.map((ch, i) =>
+                el(
+                  "tr",
+                  {},
+                  el("td", {}, i),
+                  el("td", {}, ch),
+                  el("td", {}, v.y[i]),
+                  el("td", {}, fmt(v.correct_probability[i])),
+                  el(
+                    "td",
+                    {},
+                    v.top_chars[i]
+                      .map((g, k) => `${g} ${fmt(v.top_probabilities[i][k])}`)
+                      .join("   "),
+                  ),
+                ),
+              ),
+            ),
+          ],
+          loss: () => [
+            note(
+              `mean(-log p(y)) = ${fmt(v.loss)}. Random guessing gives ln(${c.vocab_size}) = ${fmt(Math.log(c.vocab_size))}.`,
+            ),
+            maps(
+              heatmap(
+                "p(y) per position",
+                v.correct_probability.map((p) => [p]),
+                { positive: true },
+              ),
+            ),
+          ],
+          backward: () => [
+            note("Gradient size per parameter for this sample."),
+            bars(state.setup.parameter_names, v.gradient_norms),
+          ],
+          adam: () => [
+            note(
+              `Weight change since the last checkpoint. learning_rate = ${c.learning_rate}.`,
+            ),
+            bars(state.setup.parameter_names, v.change_norms),
+            el("h3", {}, "log10(change / size of weights)"),
+            note(
+              `Change over the last ${v.steps_between} steps divided by the size of the weights. One Adam step usually moves weights by about 1/1000 of their size (log10 = -3). Changes over many steps partly add up, so expect values above -3. Very low: that table barely learns. Weights that start at 0 (beta, b1, b2) show high values early.`,
+            ),
+            el(
+              "table",
+              {},
+              ...state.setup.parameter_names.map((name, k) => {
+                const ratio = v.change_norms[k] / (v.weight_norms[k] || 1);
+                return el("tr", {}, el("td", {}, name), el("td", {}, ratio > 0 ? Math.log10(ratio).toFixed(2) : "no change"));
+              }),
+            ),
+          ],
+        }[state.stage]();
+        const stage = findStage(state.stage);
+        document
+          .getElementById("detail")
+          .replaceChildren(
+            el("h2", {}, stage.label),
+            el(
+              "div",
+              { class: "explain" },
+              ...explainer(v, c).flatMap((text, k) => [el("b", {}, k === 0 ? "Simple" : "Exactly"), el("p", {}, text)]),
+            ),
+            ...stepSections(v, c),
+            el("h3", {}, "The arrays from your forward pass"),
+            ...body,
+          );
+        document
+          .getElementById("code")
+          .replaceChildren(
+            el("h2", {}, "Code"),
+            ...codePanel(stage),
+          );
+      }
+
+      function renderChart() {
+        const svg = document.getElementById("chart");
+        const width = svg.clientWidth;
+        const height = 200;
+        const { train_losses, validation_losses, max_steps } = state.progress;
+        const random = Math.log(state.setup.config.vocab_size);
+        const x = (step) => 24 + (step / max_steps) * (width - 32);
+        const y = (loss) =>
+          8 +
+          (1 - Math.min(loss, random * 1.05) / (random * 1.05)) * (height - 24);
+        const line = (points, color) =>
+          points.length
+            ? `<polyline fill="none" stroke="${color}" stroke-width="1.5" points="${points.map(([s, l]) => `${x(s)},${y(l)}`).join(" ")}"/>`
+            : "";
+        const grid = [0, 1, 2, 3, 4]
+          .map(
+            (t) =>
+              `<text x="0" y="${y(t) + 4}" font-size="10" fill="#8f8e89">${t}</text><line x1="24" x2="${width - 8}" y1="${y(t)}" y2="${y(t)}" stroke="#f0efeb"/>`,
+          )
+          .join("");
+        const guess = `<line x1="24" x2="${width - 8}" y1="${y(random)}" y2="${y(random)}" stroke="#8f8e89" stroke-dasharray="3 3"/>`;
+        svg.innerHTML =
+          grid +
+          guess +
+          line(validation_losses, "#8f8e89") +
+          line(train_losses, "#1c1c1a");
+      }
+
+      function renderHeader() {
+        const p = state.progress;
+        const status = document.getElementById("status");
+        status.className = p.error ? "error" : "";
+        status.textContent =
+          p.error ||
+          (p.train_losses.length ? "live" : `waiting for ${state.setup.command}`);
+        document.getElementById("step").textContent =
+          `${p.step} / ${p.max_steps}`;
+        const last = (list) =>
+          list.length ? fmt(list[list.length - 1][1]) : "-";
+        document.getElementById("train-loss").textContent = last(
+          p.train_losses,
+        );
+        document.getElementById("val-loss").textContent = last(
+          p.validation_losses,
+        );
+      }
+
+      function renderView() {
+        const prompt = state.setup.prompt;
+        document
+          .getElementById("generated")
+          .replaceChildren(
+            el("b", {}, prompt),
+            state.view.generated.slice(prompt.length),
+          );
+        if (state.setup.model === "gpt") return;
+        renderStory();
+        renderDetail();
+      }
+
+      function select(id) {
+        state.stage = id;
+        renderFlow();
+        renderDetail();
+      }
+
+      async function getJson(path) {
+        const response = await fetch(path);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+        return data;
+      }
+
+      async function loadView() {
+        state.view = await getJson(
+          `/api/view?layer=${state.layer}&head=${state.head}`,
+        );
+        state.shownStep = state.view.step;
+        if (state.pick === null && state.view.y) state.pick = state.view.y.length - 1;
+        renderView();
+      }
+
+      async function poll() {
+        try {
+          state.progress = await getJson("/api/progress");
+          renderHeader();
+          renderChart();
+          if (state.progress.step !== state.shownStep) await loadView();
+        } catch (error) {
+          const status = document.getElementById("status");
+          status.className = "error";
+          status.textContent = `server not reachable: ${error.message}`;
+        }
+        setTimeout(poll, 2000);
+      }
+
+      async function start() {
+        state.setup = await getJson("/api/setup");
+        document.querySelector("h1").textContent = `${state.setup.model} training`;
+        if (state.setup.model === "gpt") {
+          document.querySelectorAll(".arrays").forEach((section) => (section.style.display = "none"));
+        } else {
+          renderFlow();
+        }
+        poll();
+      }
+
+      start();
+    </script>
+  </body>
+</html>
