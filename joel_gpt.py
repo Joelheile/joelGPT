@@ -313,12 +313,12 @@ def train():
 def save(step_number, train_losses, validation_losses):
     checkpoint = {"parameters": parameters, "step": step_number, "max_steps": max_steps,
                   "train_losses": train_losses, "validation_losses": validation_losses}
-    with open("weights/micro_gpt.tmp", "wb") as file:
+    with open("weights/joel_gpt.tmp", "wb") as file:
         pickle.dump(checkpoint, file)
-    os.replace("weights/micro_gpt.tmp", "weights/micro_gpt.pkl") # swap in one go, visualizer never reads half a file
+    os.replace("weights/joel_gpt.tmp", "weights/joel_gpt.pkl") # swap in one go, visualizer never reads half a file
 
 def load():
-    with open("weights/micro_gpt.pkl", "rb") as file:
+    with open("weights/joel_gpt.pkl", "rb") as file:
         checkpoint = pickle.load(file)
     for weights, saved in zip(parameters, checkpoint["parameters"]):
         weights[...] = saved # [...] writes into the existing table, like -= in adam
@@ -336,7 +336,7 @@ def generate(prompt, n_chars):
     return decode(numbers)
 
 
-# run (python micro_gpt.py trains, python micro_gpt.py "Once upon a time" generates)
+# run (python joel_gpt.py trains, python joel_gpt.py "Once upon a time" generates)
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         load()

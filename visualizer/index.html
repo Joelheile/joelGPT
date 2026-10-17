@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>chatJPT training</title>
+    <title>joelGPT training</title>
     <style>
       :root {
         --page: #fafaf9;
@@ -354,7 +354,7 @@
   </head>
   <body>
     <header>
-      <h1>chatJPT training</h1>
+      <h1>joelGPT training</h1>
       <div class="stat"><span>step</span><b id="step">-</b></div>
       <div class="stat"><span>train loss</span><b id="train-loss">-</b></div>
       <div class="stat"><span>validation loss</span><b id="val-loss">-</b></div>
@@ -1871,7 +1871,7 @@ function codePanel(stage) {
             el("b", {}, prompt),
             state.view.generated.slice(prompt.length),
           );
-        if (state.setup.model === "gpt") return;
+        if (state.setup.model === "ai_gpt") return;
         renderStory();
         renderDetail();
       }
@@ -1915,7 +1915,7 @@ function codePanel(stage) {
       async function start() {
         state.setup = await getJson("/api/setup");
         document.querySelector("h1").textContent = `${state.setup.model} training`;
-        if (state.setup.model === "gpt") {
+        if (state.setup.model === "ai_gpt") {
           document.querySelectorAll(".arrays").forEach((section) => (section.style.display = "none"));
         } else {
           renderFlow();

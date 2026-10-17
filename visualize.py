@@ -10,8 +10,8 @@ import numpy as np
 
 ROOT = pathlib.Path(__file__).parent
 PAGE_PATH = ROOT / "visualizer" / "index.html"
-WEIGHT_FILES = {"micro_gpt": "micro_gpt.pkl", "micro_gpt_bpe": "micro_gpt_bpe.pkl", "gpt": "gpt.pt"}
-MODEL = sys.argv[1] if len(sys.argv) > 1 else "micro_gpt"
+WEIGHT_FILES = {"joel_gpt": "joel_gpt.pkl", "joel_gpt_advanced": "joel_gpt_advanced.pkl", "ai_gpt": "ai_gpt.pt"}
+MODEL = sys.argv[1] if len(sys.argv) > 1 else "joel_gpt"
 if MODEL not in WEIGHT_FILES:
     sys.exit(f"model must be one of {', '.join(WEIGHT_FILES)}, got {MODEL}")
 WEIGHTS_PATH = ROOT / "weights" / WEIGHT_FILES[MODEL]
@@ -259,7 +259,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    Handler.live = GptLive() if MODEL == "gpt" else Live()
+    Handler.live = GptLive() if MODEL == "ai_gpt" else Live()
     print(f"open http://localhost:{PORT}")
     HTTPServer(("localhost", PORT), Handler).serve_forever()
 

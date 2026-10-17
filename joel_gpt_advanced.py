@@ -23,7 +23,7 @@ def train_tokenizer():
     tokenizer.decoder = decoders.ByteLevel()
     trainer = trainers.BpeTrainer(vocab_size=vocab_size, special_tokens=["<|endoftext|>"], initial_alphabet=pre_tokenizers.ByteLevel.alphabet())
     tokenizer.train(["data/tinystories-test.txt"], trainer) # 21 mb is plenty to find the most common merges
-    tokenizer.save("data/micro_gpt_bpe-tokenizer.json")
+    tokenizer.save("data/joel_gpt_advanced-tokenizer.json")
 
 ## encode text file to token file, in chunks so 2.2 gb never sits in ram
 def encode_file(text_path, token_path):
@@ -33,9 +33,9 @@ def encode_file(text_path, token_path):
                 np.array(encoding.ids, dtype=np.uint16).tofile(token_file)
     os.replace(token_path + ".tmp", token_path) # only complete files count
 
-if not os.path.exists("data/micro_gpt_bpe-tokenizer.json"):
+if not os.path.exists("data/joel_gpt_advanced-tokenizer.json"):
     train_tokenizer()
-tokenizer = Tokenizer.from_file("data/micro_gpt_bpe-tokenizer.json")
+tokenizer = Tokenizer.from_file("data/joel_gpt_advanced-tokenizer.json")
 
 def encode(text):
     return tokenizer.encode(text).ids
@@ -44,13 +44,13 @@ def decode(numbers):
     return tokenizer.decode([int(n) for n in numbers])
 
 ## train and val files
-for text_path, token_path in [("data/tinystories-test.txt", "data/micro_gpt_bpe-val.bin"), ("data/tinystories-train.txt", "data/micro_gpt_bpe-train.bin")]:
+for text_path, token_path in [("data/tinystories-test.txt", "data/joel_gpt_advanced-val.bin"), ("data/tinystories-train.txt", "data/joel_gpt_advanced-train.bin")]:
     if not os.path.exists(token_path):
         print(f"encoding {text_path}, once")
         encode_file(text_path, token_path)
 
-train_data = np.memmap("data/micro_gpt_bpe-train.bin", dtype=np.uint16, mode="r") # reads from disk on demand
-val_data = np.memmap("data/micro_gpt_bpe-val.bin", dtype=np.uint16, mode="r")
+train_data = np.memmap("data/joel_gpt_advanced-train.bin", dtype=np.uint16, mode="r") # reads from disk on demand
+val_data = np.memmap("data/joel_gpt_advanced-val.bin", dtype=np.uint16, mode="r")
 
 ## batching
 def get_batch(data): # data is train_data or val_data
@@ -332,12 +332,12 @@ def train():
 def save(step_number, train_losses, validation_losses):
     checkpoint = {"parameters": parameters, "step": step_number, "max_steps": max_steps,
                   "train_losses": train_losses, "validation_losses": validation_losses}
-    with open("weights/micro_gpt_bpe.tmp", "wb") as file:
+    with open("weights/joel_gpt_advanced.tmp", "wb") as file:
         pickle.dump(checkpoint, file)
-    os.replace("weights/micro_gpt.tmp", "weights/micro_gpt_bpe.pkl") # swap in one go, visualizer never reads half a file
+    os.replace("weights/joel_gpt_advanced.tmp", "weights/joel_gpt_advanced.pkl") # swap in one go, visualizer never reads half a file
 
 def load():
-    with open("weights/micro_gpt.pkl", "rb") as file:
+    with open("weights/joel_gpt_advanced.pkl", "rb") as file:
         checkpoint = pickle.load(file)
     for weights, saved in zip(parameters, checkpoint["parameters"]):
         weights[...] = saved # [...] writes into the existing table, like -= in adam
@@ -355,7 +355,7 @@ def generate(prompt, n_tokens):
     return decode(numbers)
 
 
-# run (python micro_gpt_bpe.py trains, python micro_gpt_bpe.py "Once upon a time" generates)
+# run (python joel_gpt_advanced.py trains, python joel_gpt_advanced.py "Once upon a time" generates)
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         load()
